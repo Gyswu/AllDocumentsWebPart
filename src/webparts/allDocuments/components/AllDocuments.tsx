@@ -17,6 +17,11 @@ interface IState {
   loading: boolean;
   filters: { [key: string]: string };
   filterOptions: { [key: string]: Set<string> };
+  searchTerm: string;
+  sortConfig: {
+    column: string;
+    direction: 'asc' | 'desc';
+  } | null;
 }
 
 export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
@@ -26,7 +31,9 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
       items: [],
       loading: true,
       filters: {},
-      filterOptions: {}
+      filterOptions: {},
+      searchTerm: '',
+      sortConfig: null
     };
   }
 
@@ -77,7 +84,6 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
         }
 
         for (const file of rows) {
-          // Skip folders (FSObjType = 1)
           if (file.FSObjType === "1" || file.FSObjType === 1) continue;
 
           const fileName = file.FileLeafRef;
@@ -118,16 +124,68 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
     }
   }
 
+  private onSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    this.setState({ searchTerm: e.target.value });
+  };
+
+  private onSortColumn = (column: string): void => {
+    const { sortConfig } = this.state;
+    let direction: 'asc' | 'desc' = 'asc';
+
+    if (sortConfig && sortConfig.column === column && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+
+    this.setState({ sortConfig: { column, direction } });
+  };
+
+  private renderSortableHeader = (column: string, label: string): JSX.Element => {
+    const { sortConfig } = this.state;
+    const isSorted = sortConfig?.column === column;
+    const direction = isSorted ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '';
+
+    return (
+      <th onClick={() => this.onSortColumn(column)} className={styles.sortableHeader}>
+        {label} {direction}
+      </th>
+    );
+  };
+
   private onFilterChanged = (column: string, e: React.ChangeEvent<HTMLSelectElement>): void => {
     const newFilters = { ...this.state.filters, [column]: e.target.value };
     this.setState({ filters: newFilters });
   };
 
   private applyFilters(items: IDocumentItem[]): IDocumentItem[] {
-    const { filters } = this.state;
-    return items.filter(item =>
+    const { filters, searchTerm, sortConfig } = this.state;
+
+    let filtered = items.filter(item =>
       Object.entries(filters).every(([key, val]) => val === '' || item.customColumns[key] === val)
     );
+
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (sortConfig) {
+      const { column, direction } = sortConfig;
+      filtered.sort((a, b) => {
+        const valA = column === 'name' || column === 'modified' || column === 'modifiedBy' || column === 'library'
+          ? a[column]
+          : a.customColumns[column] || '';
+        const valB = column === 'name' || column === 'modified' || column === 'modifiedBy' || column === 'library'
+          ? b[column]
+          : b.customColumns[column] || '';
+
+        return direction === 'asc'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      });
+    }
+
+    return filtered;
   }
 
   public render(): React.ReactElement<IAllDocumentsProps> {
@@ -135,21 +193,26 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
     const filteredItems = this.applyFilters(items);
 
     return (
-      <div>
+      <div className={styles.container}>
         <h3>Todos los documentos</h3>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={this.state.searchTerm}
+            onChange={this.onSearchChange}
+            className={styles.searchBox}
+          />
+        </div>
 
         {this.props.customColumns.map(col => (
           <div key={col.internalName} className={styles.filterWrapper}>
             <label className={styles.filterLabel} htmlFor={col.internalName}><strong>{col.label}</strong></label>
             <select
               className={styles.filterDropdown}
-              onFocus={e => {
-                e.currentTarget.style.borderColor = '#0078d4';
-              }}
-              
-              onBlur={e => {
-                e.currentTarget.style.borderColor = '#8a8886';
-              }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#0078d4'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#8a8886'; }}
               id={col.internalName}
               value={filters[col.internalName] || ''}
               onChange={e => this.onFilterChanged(col.internalName, e)}
@@ -163,15 +226,15 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
         ))}
 
         <table className={styles.fluentliketable}>
-          <thead style={{ background: '#ddd' }}>
+          <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Modificado</th>
-              <th>Modificado por</th>
-              <th>Biblioteca</th>
-              {this.props.customColumns.map(col => (
-                <th key={col.internalName}>{col.label}</th>
-              ))}
+              {this.renderSortableHeader('name', 'Nombre')}
+              {this.renderSortableHeader('modified', 'Modificado')}
+              {this.renderSortableHeader('modifiedBy', 'Modificado por')}
+              {this.renderSortableHeader('library', 'Biblioteca')}
+              {this.props.customColumns.map(col =>
+                this.renderSortableHeader(col.internalName, col.label)
+              )}
             </tr>
           </thead>
           <tbody>
