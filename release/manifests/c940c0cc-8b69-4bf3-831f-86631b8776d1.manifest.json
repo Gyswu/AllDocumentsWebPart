@@ -1,0 +1,60 @@
+{
+  "id": "c940c0cc-8b69-4bf3-831f-86631b8776d1",
+  "alias": "AllDocumentsWebPart",
+  "componentType": "WebPart",
+  "version": "0.0.1",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+  "supportedHosts": [
+    "SharePointWebPart",
+    "TeamsPersonalApp",
+    "TeamsTab",
+    "SharePointFullPage"
+  ],
+  "supportsThemeVariants": true,
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": {
+        "default": "Advanced"
+      },
+      "title": {
+        "default": "AllDocuments"
+      },
+      "description": {
+        "default": "AllDocuments description"
+      },
+      "officeFabricIconFontName": "Page",
+      "properties": {
+        "description": "AllDocuments"
+      }
+    }
+  ],
+  "loaderConfig": {
+    "internalModuleBaseUrls": [
+      "<!-- PATH TO CDN -->"
+    ],
+    "entryModuleId": "all-documents-web-part",
+    "scriptResources": {
+      "all-documents-web-part": {
+        "type": "path",
+        "path": "all-documents-web-part_e8be515048b90ea3fcce.js"
+      },
+      "@microsoft/sp-webpart-base": {
+        "type": "component",
+        "id": "974a7777-0990-4136-8fa6-95d80114c2e0",
+        "version": "1.21.1"
+      },
+      "react": {
+        "type": "component",
+        "id": "0d910c1c-13b9-4e1c-9aa4-b008c5e42d7d",
+        "version": "17.0.1"
+      },
+      "react-dom": {
+        "type": "component",
+        "id": "aa0a46ec-1505-43cd-a44a-93f3a5aa460a",
+        "version": "17.0.1"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "all-documents-web-part-client-side-solution",
+    "id": "dfef85c3-d05b-45a9-9110-82eca8ff7d5b",
+    "version": "1.0.0.4",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Oleksandr Lugovskyy Rodriguez",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.21.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "AllDocumentsWebPart developed by Oleksandr Lugovskyy"
+      },
+      "longDescription": {
+        "default": "AllDocumentsWebPart developed by Oleksandr Lugovskyy"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "all-documents-web-part Feature",
+        "description": "The feature that activates elements of the all-documents-web-part solution.",
+        "id": "aaf99281-c074-4f8c-a23e-cb94450c7d1a",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/all-documents-web-part.sppkg"
+  }
+}
