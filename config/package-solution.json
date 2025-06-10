@@ -3,23 +3,23 @@
   "solution": {
     "name": "all-documents-web-part-client-side-solution",
     "id": "dfef85c3-d05b-45a9-9110-82eca8ff7d5b",
-    "version": "1.0.1.8",
+    "version": "1.0.1.9",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "developer": {
       "name": "Oleksandr Lugovskyy Rodriguez",
-      "websiteUrl": "",
+      "websiteUrl": "https://www.linkedin.com/in/oleksandr-lugovskyy-rodriguez/",
       "privacyUrl": "",
       "termsOfUseUrl": "",
       "mpnId": "Undefined-1.21.1"
     },
     "metadata": {
       "shortDescription": {
-        "default": "AllDocumentsWebPart developed by Oleksandr Lugovskyy"
+        "default": "WebPart developed to load all files across multiple libraries in the site in a list."
       },
       "longDescription": {
-        "default": "AllDocumentsWebPart developed by Oleksandr Lugovskyy"
+        "default": "The All Documents Web Part displays documents from all SharePoint document libraries in the current site. It provides filtering options using customizable dropdowns based on metadata columns, and presents the results in a table that visually matches SharePoint's Fluent UI style. Documents can be opened directly in edit mode via a secure link. This Web Part is restricted to specific sites to ensure controlled access. Developed by Oleksandr Lugovskyy."
       },
       "screenshotPaths": [],
       "videoUrl": "",
@@ -28,7 +28,7 @@
     "features": [
       {
         "title": "all-documents-web-part Feature",
-        "description": "The feature that activates elements of the all-documents-web-part solution.",
+        "description": "Activates the All Documents Web Part and required assets on SharePoint sites.",
         "id": "aaf99281-c074-4f8c-a23e-cb94450c7d1a",
         "version": "1.0.0.0"
       }

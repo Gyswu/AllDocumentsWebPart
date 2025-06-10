@@ -38,6 +38,7 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
   }
 
   public async componentDidMount(): Promise<void> {
+    
     try {
       const res = await this.props.spHttpClient.get(
         `${this.props.siteUrl}/_api/web/lists?$filter=BaseTemplate eq 101&$select=Id,Title`,
@@ -189,7 +190,20 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
   }
 
   public render(): React.ReactElement<IAllDocumentsProps> {
-    const { items, filters, filterOptions } = this.state;
+    const {items, filters, filterOptions } = this.state;
+    const allowedSites = [
+      "sites/sp-FIN"
+    ]
+
+    const authorized =allowedSites.some(path => this.props.siteUrl.includes(path))
+    if (!authorized) {
+      return (
+        <div style={{ padding: 16, color: 'red', fontWeight: 'bold' }}>
+          ⚠️ This webpart is not authorized to be loaded in this site.
+        </div>
+      );
+    }
+  
     const filteredItems = this.applyFilters(items);
 
     return (

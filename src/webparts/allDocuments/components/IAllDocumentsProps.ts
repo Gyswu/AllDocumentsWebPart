@@ -9,5 +9,4 @@ export interface IAllDocumentsProps {
   userDisplayName: string;
   isDarkTheme?: boolean;
   customColumns: { internalName: string; label: string }[];
-  // Asegúrate de que esta línea esté incluida
 }

@@ -28,7 +28,6 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
         environmentMessage: '',
         hasTeamsContext: false,
         userDisplayName: this.context.pageContext.user.displayName,
-        isDarkTheme: false
       }
     );
 
