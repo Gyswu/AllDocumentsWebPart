@@ -8,6 +8,6 @@ export interface IAllDocumentsProps {
   hasTeamsContext: boolean;
   userDisplayName: string;
   isDarkTheme?: boolean;
-  themeVariant?: any;
-  customColumns: string[]; // Asegúrate de que esta línea esté incluida
+  customColumns: { internalName: string; label: string }[];
+  // Asegúrate de que esta línea esté incluida
 }

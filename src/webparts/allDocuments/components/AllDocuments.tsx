@@ -3,7 +3,6 @@ import { IAllDocumentsProps } from './IAllDocumentsProps';
 import { SPHttpClient } from '@microsoft/sp-http';
 import styles from './AllDocuments.module.scss';
 
-
 export interface IDocumentItem {
   name: string;
   modified: string;
@@ -39,10 +38,10 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
       );
       const json = await res.json();
       const libraries = json.value;
-  
+
       const allItems: IDocumentItem[] = [];
       const filterOptions: { [key: string]: Set<string> } = {};
-  
+
       for (const lib of libraries) {
         const camlQuery = {
           ViewXml: `
@@ -53,11 +52,11 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
                 <FieldRef Name='FileRef' />
                 <FieldRef Name='Modified' />
                 <FieldRef Name='Editor' />
-                ${this.props.customColumns.map(col => `<FieldRef Name='${col}' />`).join('')}
+                ${this.props.customColumns.map(col => `<FieldRef Name='${col.internalName}' />`).join('')}
               </ViewFields>
             </View>`
         };
-  
+
         const itemsRes = await this.props.spHttpClient.post(
           `${this.props.siteUrl}/_api/web/lists(guid'${lib.Id}')/RenderListDataAsStream`,
           SPHttpClient.configurations.v1,
@@ -69,31 +68,31 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
             body: JSON.stringify({ parameters: camlQuery })
           }
         );
-  
+
         const itemsJson = await itemsRes.json();
         const rows = itemsJson?.Row;
         if (!rows || rows.length === 0) {
           console.warn(`No items found in library: ${lib.Title}`);
           continue;
         }
-  
+
         for (const file of rows) {
           // Skip folders (FSObjType = 1)
           if (file.FSObjType === "1" || file.FSObjType === 1) continue;
-  
+
           const fileName = file.FileLeafRef;
           const filePath = file.FileRef;
           const modified = file.Modified;
           const editor = file.Editor?.[0]?.title || file.Editor?.title || file.Editor || '';
-  
+
           const customData: { [key: string]: string } = {};
           for (const col of this.props.customColumns) {
-            const value = file[col];
-            customData[col] = value || '';
-            if (!filterOptions[col]) filterOptions[col] = new Set<string>();
-            if (value) filterOptions[col].add(value);
+            const value = file[col.internalName];
+            customData[col.internalName] = value || '';
+            if (!filterOptions[col.internalName]) filterOptions[col.internalName] = new Set<string>();
+            if (value) filterOptions[col.internalName].add(value);
           }
-  
+
           allItems.push({
             name: fileName,
             modified: modified,
@@ -104,21 +103,20 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
           });
         }
       }
-  
+
       this.setState({
         items: allItems,
         loading: false,
         filters: {},
         filterOptions: filterOptions
       });
-  
+
       console.log("Loaded document items:", allItems);
     } catch (err) {
       console.error("Error loading documents:", err);
       this.setState({ loading: false });
     }
   }
-  
 
   private onFilterChanged = (column: string, e: React.ChangeEvent<HTMLSelectElement>): void => {
     const newFilters = { ...this.state.filters, [column]: e.target.value };
@@ -141,23 +139,23 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
         <h3>Todos los documentos</h3>
 
         {this.props.customColumns.map(col => (
-          <div key={col} className={styles.filterWrapper}>
-            <label className={styles.filterLabel} htmlFor={col}><strong>{col}</strong></label>
+          <div key={col.internalName} className={styles.filterWrapper}>
+            <label className={styles.filterLabel} htmlFor={col.internalName}><strong>{col.label}</strong></label>
             <select
               className={styles.filterDropdown}
               onFocus={e => {
                 e.currentTarget.style.borderColor = '#0078d4';
               }}
+              
               onBlur={e => {
                 e.currentTarget.style.borderColor = '#8a8886';
               }}
-              id={col}
-              value={filters[col] || ''}
-              onChange={e => this.onFilterChanged(col, e)
-              }
+              id={col.internalName}
+              value={filters[col.internalName] || ''}
+              onChange={e => this.onFilterChanged(col.internalName, e)}
             >
               <option value=''>Todos</option>
-              {[...(filterOptions[col] || [])].map(option => (
+              {[...(filterOptions[col.internalName] || [])].map(option => (
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
@@ -172,19 +170,19 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
               <th>Modificado por</th>
               <th>Biblioteca</th>
               {this.props.customColumns.map(col => (
-                <th key={col}>{col}</th>
+                <th key={col.internalName}>{col.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredItems.map((item, idx) => (
               <tr key={idx}>
-                <td><a href={item.editUrl} target="_blank" rel="noreferrer" className={styles.linkStyle} >{item.name}</a></td>
+                <td><a href={item.editUrl} target="_blank" rel="noreferrer" className={styles.linkStyle}>{item.name}</a></td>
                 <td>{new Date(item.modified).toLocaleString()}</td>
                 <td>{item.modifiedBy}</td>
                 <td>{item.library}</td>
                 {this.props.customColumns.map(col => (
-                  <td key={col}>{item.customColumns[col]}</td>
+                  <td key={col.internalName}>{item.customColumns[col.internalName]}</td>
                 ))}
               </tr>
             ))}

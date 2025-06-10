@@ -36,7 +36,7 @@
     "scriptResources": {
       "all-documents-web-part": {
         "type": "path",
-        "path": "all-documents-web-part_a7fc8aa999aff3fe5398.js"
+        "path": "all-documents-web-part_0b787b072f90b1cc1e2d.js"
       },
       "react": {
         "type": "component",
@@ -51,6 +51,11 @@
       "@microsoft/sp-core-library": {
         "type": "component",
         "id": "7263c7d0-1d6a-45ec-8d85-d4d1d234171b",
+        "version": "1.21.1"
+      },
+      "@microsoft/sp-property-pane": {
+        "type": "component",
+        "id": "f9e737b7-f0df-4597-ba8c-3060f82380db",
         "version": "1.21.1"
       },
       "@microsoft/sp-webpart-base": {

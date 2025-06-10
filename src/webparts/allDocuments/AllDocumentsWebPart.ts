@@ -2,7 +2,8 @@ import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
 import {
-  IPropertyPaneConfiguration
+  IPropertyPaneConfiguration,
+  PropertyPaneTextField
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
@@ -11,6 +12,7 @@ import { IAllDocumentsProps } from './components/IAllDocumentsProps';
 
 export interface IAllDocumentsWebPartProps {
   description: string;
+  customColumnsRaw: string; // Semicolon-separated column definitions
 }
 
 export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocumentsWebPartProps> {
@@ -19,18 +21,33 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
     const element: React.ReactElement<IAllDocumentsProps> = React.createElement(
       AllDocuments,
       {
-        description: this.properties.description,
         siteUrl: this.context.pageContext.web.absoluteUrl,
         spHttpClient: this.context.spHttpClient,
+        customColumns: this._parseCustomColumns(),
+        description: this.properties.description,
         environmentMessage: '',
         hasTeamsContext: false,
         userDisplayName: this.context.pageContext.user.displayName,
-        isDarkTheme: false,
-        customColumns: ['TestColumn'] // 👈 Incluye tus columnas personalizadas aquí
+        isDarkTheme: false
       }
     );
 
     ReactDom.render(element, this.domElement);
+  }
+
+  private _parseCustomColumns(): { internalName: string; label: string }[] {
+    const raw = this.properties.customColumnsRaw || '';
+    return raw
+      .split(';')
+      .map(entry => entry.trim())
+      .filter(entry => entry.length > 0)
+      .map(entry => {
+        const [internalName, label] = entry.split(',').map(x => x.trim());
+        return {
+          internalName,
+          label: label || internalName
+        };
+      });
   }
 
   protected onDispose(): void {
@@ -43,7 +60,22 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
     return {
-      pages: []
+      pages: [
+        {
+          header: { description: "Configuración del Web Part" },
+          groups: [
+            {
+              groupName: "Columnas personalizadas",
+              groupFields: [
+                PropertyPaneTextField('customColumnsRaw', {
+                  label: 'Columnas personalizadas (formato: InternalName,Label;...)',
+                  multiline: true
+                })
+              ]
+            }
+          ]
+        }
+      ]
     };
   }
 }
