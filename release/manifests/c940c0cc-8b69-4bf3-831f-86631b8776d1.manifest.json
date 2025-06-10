@@ -7,8 +7,6 @@
   "requiresCustomScript": false,
   "supportedHosts": [
     "SharePointWebPart",
-    "TeamsPersonalApp",
-    "TeamsTab",
     "SharePointFullPage"
   ],
   "supportsThemeVariants": true,
@@ -38,7 +36,7 @@
     "scriptResources": {
       "all-documents-web-part": {
         "type": "path",
-        "path": "all-documents-web-part_5b35a37e97ba6147790a.js"
+        "path": "all-documents-web-part_a7fc8aa999aff3fe5398.js"
       },
       "react": {
         "type": "component",

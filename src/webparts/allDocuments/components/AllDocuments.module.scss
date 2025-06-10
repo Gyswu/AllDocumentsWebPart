@@ -32,3 +32,123 @@
     }
   }
 }
+
+.fluentliketable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  background-color: white;
+  border-spacing: 0;
+
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    background-color: #f3f2f1;
+    color: #323130;
+    border-bottom: 1px solid #edebe9;
+    font-weight: 600;
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #edebe9;
+    color: #323130;
+  }
+
+  tbody tr:hover {
+    background-color: #f3f2f1;
+  }
+
+  a {
+    color: #0078d4;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.fluentliketable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  background-color: white;
+  border-spacing: 0;
+
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    background-color: #f3f2f1;
+    color: #323130;
+    border-bottom: 1px solid #edebe9;
+    font-weight: 600;
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #edebe9;
+    color: #323130;
+  }
+
+  tbody tr:hover {
+    background-color: #f3f2f1;
+  }
+
+  a {
+    color: #0078d4;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.filterWrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  max-width: 250px;
+}
+
+.filterLabel {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #323130;
+}
+
+.filterDropdown {
+  padding: 8px 12px;
+  border: 1px solid #8a8886;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+  color: #323130;
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.filterDropdown:focus {
+  border-color: #0078d4;
+}
+
+.linkStyle {
+  color: #0078d4;
+  text-decoration: none;
+  font-weight: 400;
+  transition: text-decoration 0.2s ease-in-out;
+}
+
+.linkStyle:hover {
+  text-decoration: underline;
+}
+
+.linkStyle:focus {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+}
