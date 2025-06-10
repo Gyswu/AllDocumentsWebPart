@@ -1,0 +1,18 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.16.0",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "all-documents-web-part",
+    "libraryId": "dfef85c3-d05b-45a9-9110-82eca8ff7d5b",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "AllDocumentsWebPart",
+    "solutionShortDescription": "AllDocumentsWebPart description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
