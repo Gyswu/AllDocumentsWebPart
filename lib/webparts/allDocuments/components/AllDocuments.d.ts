@@ -1,27 +1,31 @@
 import * as React from 'react';
+import { IAllDocumentsProps } from './IAllDocumentsProps';
 export interface IDocumentItem {
     name: string;
-    modified: Date;
+    modified: string;
     modifiedBy: string;
-    url: string;
     library: string;
-    [key: string]: any;
-}
-interface ICustomField {
-    title: string;
-    internalName: string;
+    editUrl: string;
+    customColumns: {
+        [key: string]: string;
+    };
 }
 interface IState {
     items: IDocumentItem[];
-    customFields: ICustomField[];
     loading: boolean;
+    filters: {
+        [key: string]: string;
+    };
+    filterOptions: {
+        [key: string]: Set<string>;
+    };
 }
-export default class AllDocuments extends React.Component<{}, IState> {
-    private sp;
-    constructor(props: {});
-    componentDidMount(): void;
-    private loadAllDocuments;
-    render(): React.ReactElement;
+export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
+    constructor(props: IAllDocumentsProps);
+    componentDidMount(): Promise<void>;
+    private onFilterChanged;
+    private applyFilters;
+    render(): React.ReactElement<IAllDocumentsProps>;
 }
 export {};
 //# sourceMappingURL=AllDocuments.d.ts.map

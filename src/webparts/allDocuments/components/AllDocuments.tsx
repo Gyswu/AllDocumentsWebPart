@@ -1,153 +1,150 @@
 import * as React from 'react';
-import { getSP } from '../pnpjsConfig';
-import { SPFI } from '@pnp/sp';
-
-export interface IAllDocumentsProps {}
+import { IAllDocumentsProps } from './IAllDocumentsProps';
+import { SPHttpClient } from '@microsoft/sp-http';
 
 export interface IDocumentItem {
   name: string;
-  fileType: string;
-  modified: Date;
+  modified: string;
   modifiedBy: string;
-  url: string;
   library: string;
+  editUrl: string;
+  customColumns: { [key: string]: string };
 }
 
-export interface IAllDocumentsState {
+interface IState {
   items: IDocumentItem[];
-  filterName: string;
-  filterType: string;
-  filterUser: string;
-  filterDateFrom?: string;
-  filterDateTo?: string;
   loading: boolean;
+  filters: { [key: string]: string };
+  filterOptions: { [key: string]: Set<string> };
 }
 
-export default class AllDocuments extends React.Component<IAllDocumentsProps, IAllDocumentsState> {
-  private sp: SPFI;
-
+export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
   constructor(props: IAllDocumentsProps) {
     super(props);
     this.state = {
       items: [],
-      filterName: '',
-      filterType: 'Todos',
-      filterUser: '',
-      filterDateFrom: undefined,
-      filterDateTo: undefined,
-      loading: false,
+      loading: true,
+      filters: {},
+      filterOptions: {}
     };
-
-    this.handleFilterChange = this.handleFilterChange.bind(this);
-    this.sp = getSP();
   }
 
-  public componentDidMount(): void {
-    this.loadAllLibraries();
-  }
-
-  private async loadAllLibraries(): Promise<void> {
-    this.setState({ loading: true });
-
+  public async componentDidMount(): Promise<void> {
     try {
-      const libs = await this.sp.web.lists
-        .filter("BaseTemplate eq 101")
-        .select("Title", "Id")();
-
-      console.log("Bibliotecas detectadas:", libs);
+      const res = await this.props.spHttpClient.get(
+        `${this.props.siteUrl}/_api/web/lists?$filter=BaseTemplate eq 101&$select=Title,RootFolder/ServerRelativeUrl&$expand=RootFolder`,
+        SPHttpClient.configurations.v1
+      );
+      const json = await res.json();
+      const libraries = json.value;
 
       const allItems: IDocumentItem[] = [];
+      const filterOptions: { [key: string]: Set<string> } = {};
 
-      for (const lib of libs) {
-        try {
-          const items = await this.sp.web.lists
-            .getById(lib.Id)
-            .items
-            .filter("FSObjType eq 0")
-            .select("FileLeafRef", "File_x0020_Type", "Modified", "Editor/Title", "FileRef")
-            .expand("Editor")();
+      for (const lib of libraries) {
+        const libUrl = lib.RootFolder.ServerRelativeUrl;
+        const itemsRes = await this.props.spHttpClient.get(
+          `${this.props.siteUrl}/_api/web/getFolderByServerRelativeUrl('${libUrl}')/Files?$expand=ListItemAllFields,Author&$select=Name,TimeLastModified,Author/Title,ListItemAllFields/ID,ListItemAllFields/TestColumn,ListItemAllFields,Author`,
+          SPHttpClient.configurations.v1
+        );
+        const itemsJson = await itemsRes.json();
+        const files = itemsJson.value;
 
-          const mapped = items.map(item => ({
-            name: item.FileLeafRef,
-            fileType: item.File_x0020_Type,
-            modified: new Date(item.Modified),
-            modifiedBy: item.Editor?.Title || '',
-            url: window.location.origin + item.FileRef,
-            library: lib.Title
-          }));
+        for (const file of files) {
+          const customData: { [key: string]: string } = {};
 
-          allItems.push(...mapped);
-        } catch (err) {
-          console.warn(`No se pudo acceder a la biblioteca: ${lib.Title}`, err);
+          for (const col of this.props.customColumns) {
+            const value = file.ListItemAllFields?.[col];
+            customData[col] = value || '';
+            if (!filterOptions[col]) filterOptions[col] = new Set<string>();
+            if (value) filterOptions[col].add(value);
+          }
+
+          allItems.push({
+            name: file.Name,
+            modified: file.TimeLastModified,
+            modifiedBy: file.Author?.Title || '',
+            library: lib.Title,
+            editUrl: `${this.props.siteUrl}/_layouts/15/WopiFrame.aspx?sourcedoc=${encodeURIComponent(libUrl + '/' + file.Name)}&action=edit&mobileredirect=true`,
+            customColumns: customData
+          });
         }
       }
 
-      this.setState({ items: allItems, loading: false });
-    } catch (error) {
-      console.error("Error cargando bibliotecas:", error);
+      this.setState({
+        items: allItems,
+        loading: false,
+        filters: {},
+        filterOptions: filterOptions
+      });
+    } catch (err) {
+      console.error("Error loading documents:", err);
       this.setState({ loading: false });
     }
   }
 
-  private handleFilterChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void {
-    const { name, value } = e.target;
-    this.setState({ [name]: value } as unknown as Pick<IAllDocumentsState, keyof IAllDocumentsState>);
+  private onFilterChanged = (column: string, e: React.ChangeEvent<HTMLSelectElement>): void => {
+    const newFilters = { ...this.state.filters, [column]: e.target.value };
+    this.setState({ filters: newFilters });
+  };
+
+  private applyFilters(items: IDocumentItem[]): IDocumentItem[] {
+    const { filters } = this.state;
+    return items.filter(item =>
+      Object.entries(filters).every(([key, val]) => val === '' || item.customColumns[key] === val)
+    );
   }
 
   public render(): React.ReactElement<IAllDocumentsProps> {
-    const filteredItems = this.state.items.filter(item => {
-      const matchesName = this.state.filterName === '' || item.name.toLowerCase().includes(this.state.filterName.toLowerCase());
-      const matchesUser = this.state.filterUser === '' || (item.modifiedBy && item.modifiedBy.toLowerCase().includes(this.state.filterUser.toLowerCase()));
-      const matchesType = this.state.filterType === 'Todos' || item.fileType === this.state.filterType;
-      const matchesFromDate = !this.state.filterDateFrom || item.modified >= new Date(this.state.filterDateFrom);
-      const matchesToDate = !this.state.filterDateTo || item.modified <= new Date(this.state.filterDateTo);
-      return matchesName && matchesUser && matchesType && matchesFromDate && matchesToDate;
-    });
-
-    const fileTypes = Array.from(new Set(this.state.items.map(i => i.fileType).filter(ft => ft && ft !== ''))).sort();
-    fileTypes.unshift('Todos');
+    const { items, filters, filterOptions } = this.state;
+    const filteredItems = this.applyFilters(items);
 
     return (
       <div>
-        <div style={{ padding: '8px', background: '#f3f3f3' }}>
-          <strong>Filtros:</strong>{' '}
-          Nombre: <input type="text" name="filterName" value={this.state.filterName} onChange={this.handleFilterChange} />{' '}
-          Tipo de archivo: <select name="filterType" value={this.state.filterType} onChange={this.handleFilterChange}>
-            {fileTypes.map(type => <option key={type} value={type}>{type}</option>)}
-          </select>{' '}
-          Modificado por: <input type="text" name="filterUser" value={this.state.filterUser} onChange={this.handleFilterChange} />{' '}
-          Desde: <input type="date" name="filterDateFrom" value={this.state.filterDateFrom || ''} onChange={this.handleFilterChange} />{' '}
-          Hasta: <input type="date" name="filterDateTo" value={this.state.filterDateTo || ''} onChange={this.handleFilterChange} />
-        </div>
+        <h3>Todos los documentos</h3>
+
+        {this.props.customColumns.map(col => (
+          <div key={col} style={{ marginBottom: 10 }}>
+            <label htmlFor={col}><strong>{col}</strong></label>
+            <select
+              id={col}
+              value={filters[col] || ''}
+              onChange={e => this.onFilterChanged(col, e)}
+            >
+              <option value=''>Todos</option>
+              {[...(filterOptions[col] || [])].map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: '#ddd' }}>
             <tr>
-              <th style={{ textAlign: 'left', padding: '4px' }}>Nombre</th>
-              <th style={{ textAlign: 'left', padding: '4px' }}>Tipo</th>
-              <th style={{ textAlign: 'left', padding: '4px' }}>Modificado</th>
-              <th style={{ textAlign: 'left', padding: '4px' }}>Modificado por</th>
-              <th style={{ textAlign: 'left', padding: '4px' }}>Biblioteca</th>
+              <th>Nombre</th>
+              <th>Modificado</th>
+              <th>Modificado por</th>
+              <th>Biblioteca</th>
+              {this.props.customColumns.map(col => (
+                <th key={col}>{col}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {filteredItems.map((item, idx) => (
               <tr key={idx}>
-                <td style={{ padding: '4px' }}>
-                  <a href={item.url} target="_blank" rel="noopener noreferrer">{item.name}</a>
-                </td>
-                <td style={{ padding: '4px' }}>{item.fileType}</td>
-                <td style={{ padding: '4px' }}>{item.modified.toLocaleDateString()}</td>
-                <td style={{ padding: '4px' }}>{item.modifiedBy}</td>
-                <td style={{ padding: '4px' }}>{item.library}</td>
+                <td><a href={item.editUrl} target="_blank" rel="noreferrer">{item.name}</a></td>
+                <td>{new Date(item.modified).toLocaleString()}</td>
+                <td>{item.modifiedBy}</td>
+                <td>{item.library}</td>
+                {this.props.customColumns.map(col => (
+                  <td key={col}>{item.customColumns[col]}</td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
-        {this.state.loading && (
-          <div style={{ textAlign: 'center', padding: '8px' }}>
-            Cargando documentos...
-          </div>
-        )}
       </div>
     );
   }

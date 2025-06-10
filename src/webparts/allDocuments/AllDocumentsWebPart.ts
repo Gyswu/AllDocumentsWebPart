@@ -1,25 +1,49 @@
-// AllDocumentsWebPart.ts
-import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
-import { getSP } from "./pnpjsConfig"; // lo haremos justo ahora
-import AllDocuments, { IAllDocumentsProps } from './components/AllDocuments';
+import { Version } from '@microsoft/sp-core-library';
+import {
+  IPropertyPaneConfiguration
+} from '@microsoft/sp-property-pane';
+import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
-export interface IAllDocumentsWebPartProps { /* sin propiedades en este ejemplo */ }
+import AllDocuments from './components/AllDocuments';
+import { IAllDocumentsProps } from './components/IAllDocumentsProps';
+
+export interface IAllDocumentsWebPartProps {
+  description: string;
+}
 
 export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocumentsWebPartProps> {
 
-  public async onInit(): Promise<void> {
-    await super.onInit();
-    // Configurar PnPjs con el contexto SPFx actual
-    getSP(this.context); // inicializa PnP
-    return Promise.resolve();
+  public render(): void {
+    const element: React.ReactElement<IAllDocumentsProps> = React.createElement(
+      AllDocuments,
+      {
+        description: this.properties.description,
+        siteUrl: this.context.pageContext.web.absoluteUrl,
+        spHttpClient: this.context.spHttpClient,
+        environmentMessage: '',
+        hasTeamsContext: false,
+        userDisplayName: this.context.pageContext.user.displayName,
+        isDarkTheme: false,
+        customColumns: ['TestColumn'] // 👈 Incluye tus columnas personalizadas aquí
+      }
+    );
+
+    ReactDom.render(element, this.domElement);
   }
 
-  public render(): void {
-    const element: React.ReactElement<IAllDocumentsProps> = React.createElement(AllDocuments, {
-      // Se podría pasar información adicional vía props si fuera necesario
-    });
-    ReactDom.render(element, this.domElement);
+  protected onDispose(): void {
+    ReactDom.unmountComponentAtNode(this.domElement);
+  }
+
+  protected get dataVersion(): Version {
+    return Version.parse('1.0');
+  }
+
+  protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
+    return {
+      pages: []
+    };
   }
 }
