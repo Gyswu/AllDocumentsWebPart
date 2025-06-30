@@ -232,6 +232,10 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
         </div>
       );
     }
+
+    if (this.state.loading || this.props.customColumns.length === 0) {
+      return <div>Loading Files...</div>;
+    }
   
     const filteredItems = this.applyFilters(items);
 
