@@ -3,7 +3,7 @@
   "solution": {
     "name": "all-documents-web-part-client-side-solution",
     "id": "dfef85c3-d05b-45a9-9110-82eca8ff7d5b",
-    "version": "1.0.1.9",
+    "version": "1.0.1.95",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,

@@ -92,6 +92,13 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
           const modified = file.Modified;
           const editor = file.Editor?.[0]?.title || file.Editor?.title || file.Editor || '';
 
+          const serverRelativePath = filePath; // e.g., "/sites/sp-FINA/Fundamentals/71_Oleksandr-Lugovskyy_2024-06-19.pdf"
+          const parentPath = serverRelativePath.substring(
+            0,
+            serverRelativePath.lastIndexOf("/")
+          );
+          const libPath = `${parentPath}/Forms/AllItems.aspx`;
+
           const customData: { [key: string]: string } = {};
           for (const col of this.props.customColumns) {
             const value = file[col.internalName];
@@ -100,13 +107,35 @@ export default class AllDocuments extends React.Component<IAllDocumentsProps, IS
             if (value) filterOptions[col.internalName].add(value);
           }
 
+          const extension = fileName.split(".").pop()?.toLowerCase();
+          const officeExtensions = [
+            "docx",
+            "xlsx",
+            "pptx",
+            "doc",
+            "xls",
+            "ppt",
+          ];
+          let editUrl: string;
+
+          if (officeExtensions.includes(extension || '')) {
+            editUrl = `${this.props.siteUrl}/_layouts/15/WopiFrame.aspx?sourcedoc=${encodeURIComponent(filePath)}&action=edit&mobileredirect=true`;
+          } else if (extension === 'pdf') {
+            // Directly open PDF in browser
+            editUrl =
+              editUrl = `${window.location.origin}${libPath}?id=${encodeURIComponent(serverRelativePath)}&parent=${encodeURIComponent(parentPath)}`;
+          } else {
+            // Fallback for other files
+            editUrl = `${this.props.siteUrl}/${filePath}`;
+          }
+
           allItems.push({
             name: fileName,
             modified: modified,
             modifiedBy: editor,
             library: lib.Title,
-            editUrl: `${this.props.siteUrl}/_layouts/15/WopiFrame.aspx?sourcedoc=${encodeURIComponent(filePath)}&action=edit&mobileredirect=true`,
-            customColumns: customData
+            editUrl: editUrl,
+            customColumns: customData,
           });
         }
       }

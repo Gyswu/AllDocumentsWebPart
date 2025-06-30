@@ -7,7 +7,9 @@ export interface IAllDocumentsProps {
     hasTeamsContext: boolean;
     userDisplayName: string;
     isDarkTheme?: boolean;
-    themeVariant?: any;
-    customColumns: string[];
+    customColumns: {
+        internalName: string;
+        label: string;
+    }[];
 }
 //# sourceMappingURL=IAllDocumentsProps.d.ts.map

@@ -19,10 +19,18 @@ interface IState {
     filterOptions: {
         [key: string]: Set<string>;
     };
+    searchTerm: string;
+    sortConfig: {
+        column: string;
+        direction: 'asc' | 'desc';
+    } | null;
 }
 export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
     constructor(props: IAllDocumentsProps);
     componentDidMount(): Promise<void>;
+    private onSearchChange;
+    private onSortColumn;
+    private renderSortableHeader;
     private onFilterChanged;
     private applyFilters;
     render(): React.ReactElement<IAllDocumentsProps>;
