@@ -181,8 +181,8 @@ export default class AllDocuments extends React.Component<
         filters: {},
         filterOptions: filterOptions,
       });
-
-      console.log("Loaded document items:", allItems);
+      // Debug Purpose
+      //console.log("Loaded document items:", allItems);
     } catch (err) {
       console.error("Error loading documents:", err);
       this.setState({ loading: false });
@@ -204,7 +204,6 @@ export default class AllDocuments extends React.Component<
         onRender: (item: IDocumentItem) => {
           const extension =
             item.name.split(".").pop()?.toLowerCase() || "unknown";
-            console.log(extension)
           return (
             <Stack horizontal verticalAlign="center">
               <Icon
@@ -215,7 +214,7 @@ export default class AllDocuments extends React.Component<
                 })}
                 className={iconClass}
               />
-              <Link href={item.editUrl} target="_blank">
+              <Link href={item.editUrl} target="_blank" styles={{ root: { whiteSpace: "normal", overflow: "visible" }}}>
                 {item.name}
               </Link>
             </Stack>
@@ -414,11 +413,6 @@ export default class AllDocuments extends React.Component<
             );
           })}
         </Stack>
-
-        {/* Results count */}
-        <Text variant="medium">
-          Showing {filteredItems.length} of {this.state.items.length} documents
-        </Text>
 
         {/* DetailsList */}
         <DetailsList
