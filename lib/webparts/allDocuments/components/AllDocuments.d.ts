@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { IAllDocumentsProps } from './IAllDocumentsProps';
+import * as React from "react";
+import { IAllDocumentsProps } from "./IAllDocumentsProps";
 export interface IDocumentItem {
     name: string;
     modified: string;
@@ -22,8 +22,8 @@ interface IState {
     searchTerm: string;
     sortConfig: {
         column: string;
-        direction: 'asc' | 'desc';
-    } | null;
+        direction: "asc" | "desc";
+    };
 }
 export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
     constructor(props: IAllDocumentsProps);
