@@ -1,5 +1,6 @@
 import * as React from "react";
 import { IAllDocumentsProps } from "./IAllDocumentsProps";
+import { IColumn } from "@fluentui/react/lib/DetailsList";
 export interface IDocumentItem {
     name: string;
     modified: string;
@@ -20,19 +21,17 @@ interface IState {
         [key: string]: Set<string>;
     };
     searchTerm: string;
-    sortConfig: {
-        column: string;
-        direction: "asc" | "desc";
-    };
+    columns: IColumn[];
 }
 export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
     constructor(props: IAllDocumentsProps);
     componentDidMount(): Promise<void>;
-    private onSearchChange;
-    private onSortColumn;
-    private renderSortableHeader;
-    private onFilterChanged;
-    private applyFilters;
+    private _buildColumns;
+    private _onColumnClick;
+    private _copyAndSort;
+    private _onSearchChange;
+    private _onFilterChanged;
+    private _getFilteredItems;
     render(): React.ReactElement<IAllDocumentsProps>;
 }
 export {};

@@ -7,6 +7,20 @@ import {
   getFileTypeIconProps,
 } from "@fluentui/react-file-type-icons";
 import { Icon } from "@fluentui/react/lib/Icon";
+import {
+  DetailsList,
+  DetailsListLayoutMode,
+  SelectionMode,
+  IColumn,
+} from "@fluentui/react/lib/DetailsList";
+import { SearchBox } from "@fluentui/react/lib/SearchBox";
+import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
+import { Stack } from "@fluentui/react/lib/Stack";
+import { Text } from "@fluentui/react/lib/Text";
+import { Spinner, SpinnerSize } from "@fluentui/react/lib/Spinner";
+import { MessageBar, MessageBarType } from "@fluentui/react/lib/MessageBar";
+import { Link } from "@fluentui/react/lib/Link";
+import { mergeStyles } from "@fluentui/react/lib/Styling";
 
 // Initialize the icons once
 initializeFileTypeIcons();
@@ -26,11 +40,13 @@ interface IState {
   filters: { [key: string]: string };
   filterOptions: { [key: string]: Set<string> };
   searchTerm: string;
-  sortConfig: {
-    column: string;
-    direction: "asc" | "desc";
-  };
+  columns: IColumn[];
 }
+
+const iconClass = mergeStyles({
+  marginRight: 8,
+  verticalAlign: "middle",
+});
 
 export default class AllDocuments extends React.Component<
   IAllDocumentsProps,
@@ -44,10 +60,7 @@ export default class AllDocuments extends React.Component<
       filters: {},
       filterOptions: {},
       searchTerm: "",
-      sortConfig: {
-        column: "",
-        direction: "asc",
-      },
+      columns: this._buildColumns(),
     };
   }
 
@@ -108,7 +121,7 @@ export default class AllDocuments extends React.Component<
           const editor =
             file.Editor?.[0]?.title || file.Editor?.title || file.Editor || "";
 
-          const serverRelativePath = filePath; // e.g., "/sites/sp-FINA/Fundamentals/71_Oleksandr-Lugovskyy_2024-06-19.pdf"
+          const serverRelativePath = filePath;
           const parentPath = serverRelativePath.substring(
             0,
             serverRelativePath.lastIndexOf("/")
@@ -142,14 +155,12 @@ export default class AllDocuments extends React.Component<
               filePath
             )}&action=edit&mobileredirect=true`;
           } else if (extension === "pdf") {
-            // Directly open PDF in browser
-            editUrl = editUrl = `${
+            editUrl = `${
               window.location.origin
             }${libPath}?id=${encodeURIComponent(
               serverRelativePath
             )}&parent=${encodeURIComponent(parentPath)}`;
           } else {
-            // Fallback for other files
             editUrl = `${this.props.siteUrl}/${filePath}`;
           }
 
@@ -178,57 +189,145 @@ export default class AllDocuments extends React.Component<
     }
   }
 
-  private onSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({ searchTerm: e.target.value });
-  };
+  private _buildColumns(): IColumn[] {
+    const columns: IColumn[] = [
+      {
+        key: "name",
+        name: "Name",
+        fieldName: "name",
+        minWidth: 250,
+        maxWidth: 400,
+        isResizable: true,
+        isSorted: false,
+        isSortedDescending: false,
+        onColumnClick: this._onColumnClick,
+        onRender: (item: IDocumentItem) => {
+          const extension =
+            item.name.split(".").pop()?.toLowerCase() || "unknown";
+            console.log(extension)
+          return (
+            <Stack horizontal verticalAlign="center">
+              <Icon
+                {...getFileTypeIconProps({
+                  extension: extension,
+                  size: 20,
+                  imageFileType: "svg",
+                })}
+                className={iconClass}
+              />
+              <Link href={item.editUrl} target="_blank">
+                {item.name}
+              </Link>
+            </Stack>
+          );
+        },
+      },
+    ];
 
-  private onSortColumn = (column: string): void => {
-    const { sortConfig } = this.state;
-    let direction: "asc" | "desc" = "asc";
+    // Add custom columns
+    this.props.customColumns.forEach((col) => {
+      columns.push({
+        key: col.internalName,
+        name: col.label,
+        fieldName: col.internalName,
+        minWidth: 100,
+        maxWidth: 200,
+        isResizable: true,
+        isSorted: false,
+        isSortedDescending: false,
+        onColumnClick: this._onColumnClick,
+        onRender: (item: IDocumentItem) => {
+          return <Text>{item.customColumns[col.internalName] || ""}</Text>;
+        },
+      });
+    });
 
-    if (
-      sortConfig &&
-      sortConfig.column === column &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    }
+    return columns;
+  }
 
-    this.setState({ sortConfig: { column, direction } });
-  };
-
-  private renderSortableHeader = (
-    column: string,
-    label: string
-  ): JSX.Element => {
-    const { sortConfig } = this.state;
-    const isSorted = sortConfig?.column === column;
-    const direction = isSorted
-      ? sortConfig.direction === "asc"
-        ? "▲"
-        : "▼"
-      : "";
-
-    return (
-      <th
-        onClick={() => this.onSortColumn(column)}
-        className={styles.sortableHeader}
-      >
-        {label} {direction}
-      </th>
-    );
-  };
-
-  private onFilterChanged = (
-    column: string,
-    e: React.ChangeEvent<HTMLSelectElement>
+  private _onColumnClick = (
+    ev: React.MouseEvent<HTMLElement>,
+    column: IColumn
   ): void => {
-    const newFilters = { ...this.state.filters, [column]: e.target.value };
+    const { columns, items } = this.state;
+    const newColumns: IColumn[] = columns.slice();
+    const currColumn: IColumn = newColumns.filter(
+      (currCol) => column.key === currCol.key
+    )[0];
+
+    newColumns.forEach((newCol: IColumn) => {
+      if (newCol === currColumn) {
+        currColumn.isSortedDescending = !currColumn.isSortedDescending;
+        currColumn.isSorted = true;
+      } else {
+        newCol.isSorted = false;
+        newCol.isSortedDescending = true;
+      }
+    });
+
+    const newItems = this._copyAndSort(
+      items,
+      currColumn.fieldName!,
+      currColumn.isSortedDescending
+    );
+
+    this.setState({
+      columns: newColumns,
+      items: newItems,
+    });
+  };
+
+  private _copyAndSort(
+    items: IDocumentItem[],
+    columnKey: string,
+    isSortedDescending?: boolean
+  ): IDocumentItem[] {
+    return items.slice(0).sort((a: IDocumentItem, b: IDocumentItem) => {
+      let aValue: string;
+      let bValue: string;
+
+      if (
+        columnKey === "name" ||
+        columnKey === "modified" ||
+        columnKey === "modifiedBy" ||
+        columnKey === "library"
+      ) {
+        aValue = a[columnKey as keyof IDocumentItem] as string;
+        bValue = b[columnKey as keyof IDocumentItem] as string;
+      } else {
+        // Custom column
+        aValue = a.customColumns[columnKey] || "";
+        bValue = b.customColumns[columnKey] || "";
+      }
+
+      if (isSortedDescending) {
+        return aValue.localeCompare(bValue) * -1;
+      } else {
+        return aValue.localeCompare(bValue);
+      }
+    });
+  }
+
+  private _onSearchChange = (
+    event?: React.ChangeEvent<HTMLInputElement>,
+    newValue?: string
+  ): void => {
+    this.setState({ searchTerm: newValue || "" });
+  };
+
+  private _onFilterChanged = (
+    column: string,
+    option?: IDropdownOption
+  ): void => {
+    const newFilters = {
+      ...this.state.filters,
+      [column]: (option?.key as string) || "",
+    };
     this.setState({ filters: newFilters });
   };
 
-  private applyFilters(items: IDocumentItem[]): IDocumentItem[] {
-    const { filters, searchTerm, sortConfig } = this.state;
+  private _getFilteredItems(): IDocumentItem[] {
+    const { items, filters, searchTerm } = this.state;
 
     let filtered = items.filter((item) =>
       Object.entries(filters).every(
@@ -242,133 +341,96 @@ export default class AllDocuments extends React.Component<
       );
     }
 
-    if (sortConfig) {
-      const { column, direction } = sortConfig;
-      filtered.sort((a, b) => {
-        const valA =
-          column === "name" ||
-          column === "modified" ||
-          column === "modifiedBy" ||
-          column === "library"
-            ? a[column]
-            : a.customColumns[column] || "";
-        const valB =
-          column === "name" ||
-          column === "modified" ||
-          column === "modifiedBy" ||
-          column === "library"
-            ? b[column]
-            : b.customColumns[column] || "";
-
-        return direction === "asc"
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA);
-      });
-    }
-
     return filtered;
   }
 
   public render(): React.ReactElement<IAllDocumentsProps> {
-    const { items, filters, filterOptions } = this.state;
+    const { loading, filterOptions, filters, searchTerm } = this.state;
     const allowedSites = ["sites/sp-FIN"];
 
     const authorized = allowedSites.some((path) =>
       this.props.siteUrl.includes(path)
     );
+
     if (!authorized) {
       return (
-        <div style={{ padding: 16, color: "red", fontWeight: "bold" }}>
+        <MessageBar messageBarType={MessageBarType.error}>
           ⚠️ This webpart is not authorized to be loaded in this site.
-        </div>
+        </MessageBar>
       );
     }
 
-    if (this.state.loading || this.props.customColumns.length === 0) {
-      return <div>Loading Files...</div>;
+    if (loading || this.props.customColumns.length === 0) {
+      return (
+        <Stack horizontalAlign="center" tokens={{ padding: 20 }}>
+          <Spinner size={SpinnerSize.large} label="Loading Files..." />
+        </Stack>
+      );
     }
 
-    const filteredItems = this.applyFilters(items);
+    const filteredItems = this._getFilteredItems();
 
     return (
-      <div className={styles.container}>
-        <div style={{ marginBottom: "1rem" }}>
-          <input
-            type="text"
-            placeholder="..."
-            value={this.state.searchTerm}
-            onChange={this.onSearchChange}
-            className={styles.searchBox}
-          />
-        </div>
+      <Stack tokens={{ childrenGap: 16 }} className={styles.container}>
+        {/* Search Box */}
+        <SearchBox
+          placeholder="Search files..."
+          value={searchTerm}
+          onChange={this._onSearchChange}
+          underlined
+        />
 
-        {this.props.customColumns.map((col) => (
-          <div key={col.internalName} className={styles.filterWrapper}>
-            <label className={styles.filterLabel} htmlFor={col.internalName}>
-              <strong>{col.label}</strong>
-            </label>
-            <select
-              className={styles.filterDropdown}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#0078d4";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#8a8886";
-              }}
-              id={col.internalName}
-              value={filters[col.internalName] || ""}
-              onChange={(e) => this.onFilterChanged(col.internalName, e)}
-            >
-              <option value="">All</option>
-              {[...(filterOptions[col.internalName] || [])].map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
+        {/* Filters */}
+        <Stack
+          horizontal
+          wrap
+          tokens={{ childrenGap: 16 }}
+          styles={{ root: { marginBottom: 8 } }}
+        >
+          {this.props.customColumns.map((col) => {
+            const options: IDropdownOption[] = [
+              { key: "", text: "All" },
+              ...[...(filterOptions[col.internalName] || [])].map((val) => ({
+                key: val,
+                text: val,
+              })),
+            ];
 
-        <table className={styles.fluentliketable}>
-          <thead>
-            <tr>
-              {this.renderSortableHeader("name", "Name")}
-              {this.props.customColumns.map((col) =>
-                this.renderSortableHeader(col.internalName, col.label)
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((item, idx) => (
-              <tr key={idx}>
-                <td>
-                  <Icon
-                    {...getFileTypeIconProps({
-                      extension: item.name.split(".").pop()?.toLowerCase(),
-                      size: 32,
-                      imageFileType: "svg",
-                    })}
-                    style={{ marginRight: "8px", verticalAlign: "middle" }}
-                  />
-                  <a
-                    href={item.editUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={styles.linkStyle}
-                  >
-                    {item.name}
-                  </a>
-                </td>
-                {this.props.customColumns.map((col) => (
-                  <td key={col.internalName}>
-                    {item.customColumns[col.internalName]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            return (
+              <Stack.Item
+                key={col.internalName}
+                styles={{ root: { minWidth: 200 } }}
+              >
+                <Dropdown
+                  label={col.label}
+                  selectedKey={filters[col.internalName] || ""}
+                  onChange={(e, option) =>
+                    this._onFilterChanged(col.internalName, option)
+                  }
+                  options={options}
+                  styles={{ dropdown: { width: 200 } }}
+                />
+              </Stack.Item>
+            );
+          })}
+        </Stack>
+
+        {/* Results count */}
+        <Text variant="medium">
+          Showing {filteredItems.length} of {this.state.items.length} documents
+        </Text>
+
+        {/* DetailsList */}
+        <DetailsList
+          items={filteredItems}
+          columns={this.state.columns}
+          setKey="set"
+          layoutMode={DetailsListLayoutMode.justified}
+          selectionMode={SelectionMode.none}
+          isHeaderVisible={true}
+          compact={false}
+        />
+      </Stack>
     );
   }
 }
