@@ -10,6 +10,9 @@ export interface IDocumentItem {
     customColumns: {
         [key: string]: string;
     };
+    columnFormatting: {
+        [key: string]: string;
+    };
 }
 interface IState {
     items: IDocumentItem[];
@@ -22,10 +25,19 @@ interface IState {
     };
     searchTerm: string;
     columns: IColumn[];
+    columnFormattersByLibrary: {
+        [libId: string]: {
+            [fieldName: string]: Record<string, unknown>;
+        };
+    };
 }
 export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
     constructor(props: IAllDocumentsProps);
     componentDidMount(): Promise<void>;
+    private _renderColumnFormatting;
+    private _processElement;
+    private _evaluateOperator;
+    private _evaluateOperand;
     private _buildColumns;
     private _onColumnClick;
     private _copyAndSort;

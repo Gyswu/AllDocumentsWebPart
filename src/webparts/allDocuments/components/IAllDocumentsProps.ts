@@ -1,4 +1,4 @@
-import { SPHttpClient } from '@microsoft/sp-http';
+import { SPHttpClient } from "@microsoft/sp-http";
 
 export interface IAllDocumentsProps {
   description: string;
@@ -9,4 +9,5 @@ export interface IAllDocumentsProps {
   userDisplayName: string;
   isDarkTheme?: boolean;
   customColumns: { internalName: string; label: string }[];
+  useColumnFormatting: boolean;
 }

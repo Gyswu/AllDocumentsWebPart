@@ -32,6 +32,7 @@ export interface IDocumentItem {
   library: string;
   editUrl: string;
   customColumns: { [key: string]: string };
+  columnFormatting: { [key: string]: string }; // HTML string from SharePoint
 }
 
 interface IState {
@@ -41,6 +42,9 @@ interface IState {
   filterOptions: { [key: string]: Set<string> };
   searchTerm: string;
   columns: IColumn[];
+  columnFormattersByLibrary: {
+    [libId: string]: { [fieldName: string]: Record<string, unknown> };
+  };
 }
 
 const iconClass = mergeStyles({
@@ -61,6 +65,7 @@ export default class AllDocuments extends React.Component<
       filterOptions: {},
       searchTerm: "",
       columns: this._buildColumns(),
+      columnFormattersByLibrary: {},
     };
   }
 
@@ -75,6 +80,54 @@ export default class AllDocuments extends React.Component<
 
       const allItems: IDocumentItem[] = [];
       const filterOptions: { [key: string]: Set<string> } = {};
+      const columnFormattersByLibrary: {
+        [libId: string]: { [fieldName: string]: Record<string, unknown> };
+      } = {};
+
+      // Load column formatting if enabled
+      if (this.props.useColumnFormatting) {
+        for (const lib of libraries) {
+          columnFormattersByLibrary[lib.Id] = {};
+
+          for (const col of this.props.customColumns) {
+            try {
+              const fieldRes = await this.props.spHttpClient.get(
+                `${this.props.siteUrl}/_api/web/lists(guid'${lib.Id}')/fields?$filter=InternalName eq '${col.internalName}'&$select=CustomFormatter`,
+                SPHttpClient.configurations.v1
+              );
+              const fieldJson = await fieldRes.json();
+
+              if (
+                fieldJson.value &&
+                fieldJson.value.length > 0 &&
+                fieldJson.value[0].CustomFormatter
+              ) {
+                try {
+                  const formatter = JSON.parse(
+                    fieldJson.value[0].CustomFormatter
+                  );
+                  columnFormattersByLibrary[lib.Id][col.internalName] =
+                    formatter;
+                  console.log(
+                    `Loaded formatter for ${col.internalName}:`,
+                    formatter
+                  );
+                } catch (parseErr) {
+                  console.warn(
+                    `Could not parse formatter for ${col.internalName}:`,
+                    parseErr
+                  );
+                }
+              }
+            } catch (err) {
+              console.warn(
+                `Could not load formatting for column ${col.internalName}:`,
+                err
+              );
+            }
+          }
+        }
+      }
 
       for (const lib of libraries) {
         const camlQuery = {
@@ -129,12 +182,27 @@ export default class AllDocuments extends React.Component<
           const libPath = `${parentPath}/Forms/AllItems.aspx`;
 
           const customData: { [key: string]: string } = {};
+          const columnFormatting: { [key: string]: string } = {};
+
           for (const col of this.props.customColumns) {
             const value = file[col.internalName];
             customData[col.internalName] = value || "";
             if (!filterOptions[col.internalName])
               filterOptions[col.internalName] = new Set<string>();
             if (value) filterOptions[col.internalName].add(value);
+
+            // Apply column formatting if enabled
+            if (
+              this.props.useColumnFormatting &&
+              columnFormattersByLibrary[lib.Id]?.[col.internalName]
+            ) {
+              const htmlString = this._renderColumnFormatting(
+                columnFormattersByLibrary[lib.Id][col.internalName],
+                value,
+                col.internalName
+              );
+              columnFormatting[col.internalName] = htmlString;
+            }
           }
 
           const extension = fileName.split(".").pop()?.toLowerCase();
@@ -171,6 +239,7 @@ export default class AllDocuments extends React.Component<
             library: lib.Title,
             editUrl: editUrl,
             customColumns: customData,
+            columnFormatting: columnFormatting,
           });
         }
       }
@@ -180,13 +249,172 @@ export default class AllDocuments extends React.Component<
         loading: false,
         filters: {},
         filterOptions: filterOptions,
+        columnFormattersByLibrary: columnFormattersByLibrary,
       });
-      // Debug Purpose
+      //DEBUG PURPOSE
       //console.log("Loaded document items:", allItems);
     } catch (err) {
       console.error("Error loading documents:", err);
       this.setState({ loading: false });
     }
+  }
+
+  private _renderColumnFormatting(
+    formatter: Record<string, unknown>,
+    currentValue: string,
+    fieldName: string
+  ): string {
+    try {
+      return this._processElement(formatter, currentValue, fieldName);
+    } catch (err) {
+      console.warn("Error rendering column formatting:", err);
+      return currentValue;
+    }
+  }
+
+  private _processElement(
+    element: Record<string, unknown>,
+    currentValue: string,
+    fieldName: string
+  ): string {
+    if (!element || typeof element !== "object") {
+      return "";
+    }
+
+    const elmType = element.elmType as string;
+    const children = element.children as Record<string, unknown>[] | undefined;
+    const txtContent = element.txtContent as string | undefined;
+    const attributes = element.attributes as
+      | Record<string, unknown>
+      | undefined;
+    const style = element.style as Record<string, string> | undefined;
+
+    // Build the HTML element
+    let html = `<${elmType || "div"}`;
+
+    // Process attributes (including class)
+    if (attributes) {
+      if (attributes.class) {
+        const classValue = this._evaluateOperator(
+          attributes.class,
+          currentValue,
+          fieldName
+        );
+        if (classValue) {
+          html += ` class="${classValue}"`;
+        }
+      }
+    }
+
+    // Process inline styles
+    if (style) {
+      const styleStr = Object.entries(style)
+        .map(([key, value]) => {
+          const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+          return `${cssKey}: ${value}`;
+        })
+        .join("; ");
+      if (styleStr) {
+        html += ` style="${styleStr}"`;
+      }
+    }
+
+    html += ">";
+
+    // Process text content
+    if (txtContent) {
+      const text = txtContent.replace(/\[\$(\w+)\]/g, (match, field) => {
+        return field === fieldName ? currentValue : match;
+      });
+      html += text;
+    }
+
+    // Process children recursively
+    if (children && Array.isArray(children)) {
+      for (const child of children) {
+        html += this._processElement(child, currentValue, fieldName);
+      }
+    }
+
+    html += `</${elmType || "div"}>`;
+
+    return html;
+  }
+
+  private _evaluateOperator(
+    operatorObj: unknown,
+    currentValue: string,
+    fieldName: string
+  ): string {
+    if (typeof operatorObj === "string") {
+      return operatorObj;
+    }
+
+    if (typeof operatorObj !== "object" || operatorObj === null) {
+      return "";
+    }
+
+    const obj = operatorObj as Record<string, unknown>;
+    const operator = obj.operator as string;
+    const operands = obj.operands as unknown[];
+
+    if (!operator || !operands) {
+      return "";
+    }
+
+    if (operator === ":") {
+      // Ternary operator: condition ? trueValue : falseValue
+      if (operands.length >= 3) {
+        const condition = this._evaluateOperator(
+          operands[0],
+          currentValue,
+          fieldName
+        );
+        if (condition === "true") {
+          return this._evaluateOperator(operands[1], currentValue, fieldName);
+        } else {
+          return this._evaluateOperator(operands[2], currentValue, fieldName);
+        }
+      }
+    } else if (operator === "==") {
+      // Equality check
+      if (operands.length >= 2) {
+        const left = this._evaluateOperand(
+          operands[0],
+          currentValue,
+          fieldName
+        );
+        const right = this._evaluateOperand(
+          operands[1],
+          currentValue,
+          fieldName
+        );
+        return left === right ? "true" : "false";
+      }
+    }
+
+    return "";
+  }
+
+  private _evaluateOperand(
+    operand: unknown,
+    currentValue: string,
+    fieldName: string
+  ): string {
+    if (typeof operand === "string") {
+      // Handle field references like [$FieldName]
+      if (operand.startsWith("[$") && operand.endsWith("]")) {
+        const field = operand.substring(2, operand.length - 1);
+        return field === fieldName ? currentValue : "";
+      }
+      return operand;
+    }
+
+    if (typeof operand === "object" && operand !== null) {
+      return this._evaluateOperator(operand, currentValue, fieldName);
+    }
+
+    return String(operand || "");
   }
 
   private _buildColumns(): IColumn[] {
@@ -202,19 +430,28 @@ export default class AllDocuments extends React.Component<
         isSortedDescending: false,
         onColumnClick: this._onColumnClick,
         onRender: (item: IDocumentItem) => {
-          const extension =
-            item.name.split(".").pop()?.toLowerCase() || "unknown";
+          const extension = item.name.split(".").pop()?.toLowerCase();
           return (
             <Stack horizontal verticalAlign="center">
               <Icon
                 {...getFileTypeIconProps({
                   extension: extension,
-                  size: 20,
+                  size: 24,
                   imageFileType: "svg",
                 })}
                 className={iconClass}
               />
-              <Link href={item.editUrl} target="_blank" styles={{ root: { whiteSpace: "normal", overflow: "visible" }}}>
+              <Link
+                href={item.editUrl}
+                styles={{
+                  root: {
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  },
+                }}
+                target="_blank"
+              >
                 {item.name}
               </Link>
             </Stack>
@@ -236,7 +473,23 @@ export default class AllDocuments extends React.Component<
         isSortedDescending: false,
         onColumnClick: this._onColumnClick,
         onRender: (item: IDocumentItem) => {
-          return <Text>{item.customColumns[col.internalName] || ""}</Text>;
+          const value = item.customColumns[col.internalName] || "";
+
+          if (
+            this.props.useColumnFormatting &&
+            item.columnFormatting[col.internalName]
+          ) {
+            // Render HTML with SharePoint classes
+            return (
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: item.columnFormatting[col.internalName],
+                }}
+              />
+            );
+          }
+
+          return <Text>{value}</Text>;
         },
       });
     });
@@ -282,17 +535,21 @@ export default class AllDocuments extends React.Component<
     isSortedDescending?: boolean
   ): IDocumentItem[] {
     return items.slice(0).sort((a: IDocumentItem, b: IDocumentItem) => {
-      let aValue: string;
-      let bValue: string;
+      let aValue: string = "";
+      let bValue: string = "";
 
-      if (
-        columnKey === "name" ||
-        columnKey === "modified" ||
-        columnKey === "modifiedBy" ||
-        columnKey === "library"
-      ) {
-        aValue = a[columnKey as keyof IDocumentItem] as string;
-        bValue = b[columnKey as keyof IDocumentItem] as string;
+      if (columnKey === "name") {
+        aValue = a.name;
+        bValue = b.name;
+      } else if (columnKey === "modified") {
+        aValue = a.modified;
+        bValue = b.modified;
+      } else if (columnKey === "modifiedBy") {
+        aValue = a.modifiedBy;
+        bValue = b.modifiedBy;
+      } else if (columnKey === "library") {
+        aValue = a.library;
+        bValue = b.library;
       } else {
         // Custom column
         aValue = a.customColumns[columnKey] || "";

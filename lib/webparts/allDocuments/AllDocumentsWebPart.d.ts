@@ -1,9 +1,10 @@
-import { Version } from '@microsoft/sp-core-library';
-import { IPropertyPaneConfiguration } from '@microsoft/sp-property-pane';
-import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import { Version } from "@microsoft/sp-core-library";
+import { IPropertyPaneConfiguration } from "@microsoft/sp-property-pane";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 export interface IAllDocumentsWebPartProps {
     description: string;
     customColumnsRaw: string;
+    useColumnFormatting: boolean;
 }
 export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocumentsWebPartProps> {
     render(): void;

@@ -1,4 +1,4 @@
-import { SPHttpClient } from '@microsoft/sp-http';
+import { SPHttpClient } from "@microsoft/sp-http";
 export interface IAllDocumentsProps {
     description: string;
     siteUrl: string;
@@ -11,5 +11,6 @@ export interface IAllDocumentsProps {
         internalName: string;
         label: string;
     }[];
+    useColumnFormatting: boolean;
 }
 //# sourceMappingURL=IAllDocumentsProps.d.ts.map
