@@ -3,6 +3,7 @@ import { IAllDocumentsProps } from "./IAllDocumentsProps";
 import { IColumn } from "@fluentui/react/lib/DetailsList";
 export interface IDocumentItem {
     name: string;
+    extension: string;
     modified: string;
     modifiedBy: string;
     library: string;

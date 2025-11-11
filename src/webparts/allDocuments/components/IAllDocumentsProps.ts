@@ -10,4 +10,7 @@ export interface IAllDocumentsProps {
   isDarkTheme?: boolean;
   customColumns: { internalName: string; label: string }[];
   useColumnFormatting: boolean;
+  showModified: boolean;
+  showModifiedBy: boolean;
+  showLibrary: boolean;
 }

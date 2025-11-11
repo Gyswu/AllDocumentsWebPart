@@ -5,6 +5,9 @@ export interface IAllDocumentsWebPartProps {
     description: string;
     customColumnsRaw: string;
     useColumnFormatting: boolean;
+    showModified: boolean;
+    showModifiedBy: boolean;
+    showLibrary: boolean;
 }
 export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocumentsWebPartProps> {
     render(): void;

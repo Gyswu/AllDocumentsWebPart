@@ -15,6 +15,9 @@ export interface IAllDocumentsWebPartProps {
   description: string;
   customColumnsRaw: string;
   useColumnFormatting: boolean;
+  showModified: boolean;
+  showModifiedBy: boolean;
+  showLibrary: boolean;
 }
 
 export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocumentsWebPartProps> {
@@ -30,6 +33,9 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
         hasTeamsContext: false,
         userDisplayName: this.context.pageContext.user.displayName,
         useColumnFormatting: this.properties.useColumnFormatting || false,
+        showModified: this.properties.showModified !== false, 
+        showModifiedBy: this.properties.showModifiedBy !== false, 
+        showLibrary: this.properties.showLibrary !== false,
       }
     );
 
@@ -66,11 +72,27 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
           header: { description: "Web Part configuration" },
           groups: [
             {
+              groupName: "System Columns configuration",
+              groupFields: [
+                PropertyPaneToggle("showModified", {
+                  label: 'System Columns "Modified"',
+                  checked: this.properties.showModified !== false,
+                }),
+                PropertyPaneToggle("showModifiedBy", {
+                  label: 'System Columns "Modified By"',
+                  checked: this.properties.showModifiedBy !== false,
+                }),
+                PropertyPaneToggle("showLibrary", {
+                  label: 'System Columns "Library"',
+                  checked: this.properties.showLibrary !== false,
+                }),
+              ],
+            },
+            {
               groupName: "Custom columns",
               groupFields: [
                 PropertyPaneTextField("customColumnsRaw", {
-                  label:
-                    "Custom columns (format: InternalName,Label;...)",
+                  label: "Custom columns (format: InternalName,Label;...)",
                   multiline: true,
                   description:
                     "Ex: Testeo,Prueba;Status,Estado;Priority,Prioridad",
@@ -81,7 +103,8 @@ export default class AllDocumentsWebPart extends BaseClientSideWebPart<IAllDocum
               groupName: "Visualization options",
               groupFields: [
                 PropertyPaneToggle("useColumnFormatting", {
-                  label: "Use Sharepoint column formating (Custom column colors)",
+                  label:
+                    "Use Sharepoint column formating (Custom column colors)",
                   onText: "Enabled",
                   offText: "Disabled",
                   checked: this.properties.useColumnFormatting || false,

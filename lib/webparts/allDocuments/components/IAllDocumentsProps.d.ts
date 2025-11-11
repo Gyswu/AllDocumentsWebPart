@@ -12,5 +12,8 @@ export interface IAllDocumentsProps {
         label: string;
     }[];
     useColumnFormatting: boolean;
+    showModified: boolean;
+    showModifiedBy: boolean;
+    showLibrary: boolean;
 }
 //# sourceMappingURL=IAllDocumentsProps.d.ts.map

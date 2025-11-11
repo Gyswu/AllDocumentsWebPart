@@ -27,6 +27,7 @@ initializeFileTypeIcons();
 
 export interface IDocumentItem {
   name: string;
+  extension: string;
   modified: string;
   modifiedBy: string;
   library: string;
@@ -50,12 +51,13 @@ interface IState {
 const iconClass = mergeStyles({
   marginRight: 8,
   verticalAlign: "middle",
+  fontSize: 24,
+  height: 24,
+  width: 24,
+  display: "inline-block",
 });
 
-export default class AllDocuments extends React.Component<
-  IAllDocumentsProps,
-  IState
-> {
+export default class AllDocuments extends React.Component<IAllDocumentsProps, IState> {
   constructor(props: IAllDocumentsProps) {
     super(props);
     this.state = {
@@ -173,13 +175,8 @@ export default class AllDocuments extends React.Component<
           const modified = file.Modified;
           const editor =
             file.Editor?.[0]?.title || file.Editor?.title || file.Editor || "";
-
-          const serverRelativePath = filePath;
-          const parentPath = serverRelativePath.substring(
-            0,
-            serverRelativePath.lastIndexOf("/")
-          );
-          const libPath = `${parentPath}/Forms/AllItems.aspx`;
+          const extension =
+            fileName.split(".").pop()?.toLowerCase() || "unknown";
 
           const customData: { [key: string]: string } = {};
           const columnFormatting: { [key: string]: string } = {};
@@ -205,7 +202,6 @@ export default class AllDocuments extends React.Component<
             }
           }
 
-          const extension = fileName.split(".").pop()?.toLowerCase();
           const officeExtensions = [
             "docx",
             "xlsx",
@@ -216,24 +212,28 @@ export default class AllDocuments extends React.Component<
           ];
           let editUrl: string;
 
-          if (officeExtensions.includes(extension || "")) {
+          if (officeExtensions.includes(extension)) {
             editUrl = `${
               this.props.siteUrl
             }/_layouts/15/WopiFrame.aspx?sourcedoc=${encodeURIComponent(
               filePath
             )}&action=edit&mobileredirect=true`;
           } else if (extension === "pdf") {
+            const parentPath = filePath.substring(0, filePath.lastIndexOf("/"));
+            const libPath = `${parentPath}/Forms/AllItems.aspx`;
             editUrl = `${
               window.location.origin
             }${libPath}?id=${encodeURIComponent(
-              serverRelativePath
+              filePath
             )}&parent=${encodeURIComponent(parentPath)}`;
           } else {
-            editUrl = `${this.props.siteUrl}/${filePath}`;
+            // Fix for file URLs - ensure no double site paths
+            editUrl = `${window.location.origin}${filePath}`;
           }
 
           allItems.push({
             name: fileName,
+            extension: extension,
             modified: modified,
             modifiedBy: editor,
             library: lib.Title,
@@ -430,12 +430,11 @@ export default class AllDocuments extends React.Component<
         isSortedDescending: false,
         onColumnClick: this._onColumnClick,
         onRender: (item: IDocumentItem) => {
-          const extension = item.name.split(".").pop()?.toLowerCase();
           return (
             <Stack horizontal verticalAlign="center">
               <Icon
                 {...getFileTypeIconProps({
-                  extension: extension,
+                  extension: item.extension,
                   size: 24,
                   imageFileType: "svg",
                 })}
@@ -443,6 +442,7 @@ export default class AllDocuments extends React.Component<
               />
               <Link
                 href={item.editUrl}
+                target="_blank"
                 styles={{
                   root: {
                     whiteSpace: "nowrap",
@@ -450,7 +450,6 @@ export default class AllDocuments extends React.Component<
                     textOverflow: "ellipsis",
                   },
                 }}
-                target="_blank"
               >
                 {item.name}
               </Link>
@@ -459,6 +458,59 @@ export default class AllDocuments extends React.Component<
         },
       },
     ];
+
+    // Add system columns based on configuration
+    if (this.props.showModified) {
+      columns.push({
+        key: "modified",
+        name: "Modified",
+        fieldName: "modified",
+        minWidth: 150,
+        maxWidth: 200,
+        isResizable: true,
+        isSorted: false,
+        isSortedDescending: false,
+        onColumnClick: this._onColumnClick,
+        onRender: (item: IDocumentItem) => {
+          const date = new Date(item.modified);
+          return <Text>{date.toLocaleString()}</Text>;
+        },
+      });
+    }
+
+    if (this.props.showModifiedBy) {
+      columns.push({
+        key: "modifiedBy",
+        name: "Modified By",
+        fieldName: "modifiedBy",
+        minWidth: 150,
+        maxWidth: 200,
+        isResizable: true,
+        isSorted: false,
+        isSortedDescending: false,
+        onColumnClick: this._onColumnClick,
+        onRender: (item: IDocumentItem) => {
+          return <Text>{item.modifiedBy}</Text>;
+        },
+      });
+    }
+
+    if (this.props.showLibrary) {
+      columns.push({
+        key: "library",
+        name: "Library",
+        fieldName: "library",
+        minWidth: 150,
+        maxWidth: 200,
+        isResizable: true,
+        isSorted: false,
+        isSortedDescending: false,
+        onColumnClick: this._onColumnClick,
+        onRender: (item: IDocumentItem) => {
+          return <Text>{item.library}</Text>;
+        },
+      });
+    }
 
     // Add custom columns
     this.props.customColumns.forEach((col) => {
@@ -535,21 +587,18 @@ export default class AllDocuments extends React.Component<
     isSortedDescending?: boolean
   ): IDocumentItem[] {
     return items.slice(0).sort((a: IDocumentItem, b: IDocumentItem) => {
-      let aValue: string = "";
-      let bValue: string = "";
+      let aValue: string;
+      let bValue: string;
 
-      if (columnKey === "name") {
-        aValue = a.name;
-        bValue = b.name;
-      } else if (columnKey === "modified") {
-        aValue = a.modified;
-        bValue = b.modified;
-      } else if (columnKey === "modifiedBy") {
-        aValue = a.modifiedBy;
-        bValue = b.modifiedBy;
-      } else if (columnKey === "library") {
-        aValue = a.library;
-        bValue = b.library;
+      if (
+        columnKey === "name" ||
+        columnKey === "extension" ||
+        columnKey === "modified" ||
+        columnKey === "modifiedBy" ||
+        columnKey === "library"
+      ) {
+        aValue = a[columnKey as keyof IDocumentItem] as string;
+        bValue = b[columnKey as keyof IDocumentItem] as string;
       } else {
         // Custom column
         aValue = a.customColumns[columnKey] || "";
